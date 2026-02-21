@@ -2,189 +2,287 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>麻将结算器-正式版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>麻将结算器-全能规则版</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <style>
-        :root { --primary: #2c3e50; --win-text: #e74c3c; --lose-text: #27ae60; --bg: #f4f7f6; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 10px; }
-        .container { max-width: 480px; margin: auto; background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); padding: 15px; }
+        :root { --primary: #2c3e50; --win-text: #e74c3c; --lose-text: #27ae60; --bg: #f4f7f6; --zh-color: #c0392b; }
+        * { -webkit-touch-callout: none; -webkit-user-select: none; touch-action: manipulation; box-sizing: border-box; }
+        input { -webkit-user-select: auto; }
         
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: env(safe-area-inset-top) 10px 40px; }
+        .container { max-width: 480px; margin: auto; background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); padding: 15px; margin-top: 10px; }
+        
+        .total-panel { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; background: var(--primary); color: white; padding: 15px 10px; border-radius: 15px; margin-bottom: 15px; text-align: center; }
+        .total-item div:first-child { font-size: 11px; opacity: 0.8; margin-bottom: 5px; overflow: hidden; white-space: nowrap; }
+        .total-item div:last-child { font-size: 18px; font-weight: 900; font-family: monospace; }
+
         .section { margin-bottom: 12px; padding: 12px; border: 1px solid #eee; border-radius: 15px; background: #fff; }
-        .section-title { font-size: 13px; color: #7f8c8d; margin-bottom: 10px; font-weight: bold; display: flex; align-items: center; }
-        .section-title::before { content: ""; display: inline-block; width: 4px; height: 14px; background: var(--primary); margin-right: 8px; border-radius: 2px; }
+        .section-title { font-size: 13px; color: #7f8c8d; margin-bottom: 10px; font-weight: bold; display: flex; align-items: center; justify-content: space-between; }
+        .section-title span::before { content: ""; display: inline-block; width: 4px; height: 14px; background: var(--primary); margin-right: 8px; border-radius: 2px; vertical-align: middle; }
+
+        .name-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+        .name-item { display: flex; align-items: center; background: #f8f9fa; border-radius: 10px; padding: 4px 10px; border: 1px solid #eee; }
+        .move-btn { background: #eee; border: none; border-radius: 6px; width: 32px; height: 32px; color: #7f8c8d; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .name-input { flex: 1; border: none; background: transparent; padding: 8px 10px; font-size: 14px; font-weight: bold; color: var(--primary); text-align: center; }
+        .name-input:focus { outline: none; }
 
         .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-        .type-grid { grid-template-columns: repeat(2, 1fr); }
         .btn-check { display: none; }
-        .btn-label { display: block; padding: 12px 2px; text-align: center; background: #f8f9fa; border: 1px solid #eee; border-radius: 10px; cursor: pointer; font-size: 14px; transition: 0.2s; }
+        .btn-label { display: block; padding: 12px 2px; text-align: center; background: #f8f9fa; border: 1px solid #eee; border-radius: 10px; cursor: pointer; font-size: 14px; transition: 0.1s; overflow: hidden; white-space: nowrap; }
         .btn-check:checked + .btn-label { background: var(--primary); color: white; border-color: var(--primary); font-weight: bold; }
-        
-        /* 禁用样式 */
-        .btn-check:disabled + .btn-label { opacity: 0.3; cursor: not-allowed; background: #eee; color: #999; }
+        .btn-check:disabled + .btn-label { opacity: 0.2; cursor: not-allowed; background: #f1f1f1; }
 
-        .mqq-box { display: flex; align-items: center; justify-content: center; padding: 15px; background: #fff9db; border-radius: 10px; margin-top: 10px; cursor: pointer; border: 1px solid #ffe066; }
-        .mqq-box input { width: 20px; height: 20px; margin-right: 12px; }
+        .mqq-box { display: flex; align-items: center; justify-content: center; padding: 12px; background: #fff9db; border-radius: 10px; margin-top: 8px; border: 1px solid #ffe066; font-size: 14px; }
         .qys-box { background: #e3f2fd; border: 1px solid #90caf9; color: #1976d2; }
 
-        .name-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 5px; }
-        .name-input { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 8px 0; text-align: center; font-size: 12px; box-sizing: border-box; }
-
-        #result { margin-top: 15px; }
-        .score-card { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-radius: 12px; margin-bottom: 8px; border: 1px solid #eee; }
+        .score-card { display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; border-radius: 12px; margin-bottom: 5px; border: 1px solid #eee; }
         .win-item { background: #fff5f5; color: var(--win-text); border-color: #ffdada; }
         .lose-item { background: #f0fff4; color: var(--lose-text); border-color: #dcf5e1; }
-        .score-val { font-weight: 900; font-size: 24px; }
-        .dealer-tag { font-size: 11px; background: #f39c12; color: white; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
-        .hint { font-size: 11px; color: #bdc3c7; margin-top: 8px; text-align: center; }
+        .score-val { font-weight: 800; font-size: 20px; font-family: monospace; }
+        .dealer-tag { font-size: 10px; background: #f39c12; color: white; padding: 2px 5px; border-radius: 4px; margin-left: 5px; }
+
+        .btn-group { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin: 15px 0; }
+        .action-btn { padding: 16px; border: none; border-radius: 15px; background: #27ae60; color: white; font-size: 16px; font-weight: bold; box-shadow: 0 4px 10px rgba(39,174,96,0.3); }
+        .zh-btn { background: var(--zh-color); box-shadow: 0 4px 10px rgba(192,57,43,0.3); }
+
+        .history-list { max-height: 400px; overflow-y: auto; }
+        .history-item { padding: 12px; border-bottom: 1px solid #eee; display: flex; flex-direction: column; gap: 6px; }
+        .history-main { display: flex; justify-content: space-between; align-items: center; }
+        .history-tag { font-size: 10px; background: #eee; padding: 2px 6px; border-radius: 4px; color: #7f8c8d; }
+        .zh-tag { background: var(--zh-color); color: white; }
+        .history-detail-bar { font-size: 11px; color: #7f8c8d; background: #f9f9f9; padding: 6px 10px; border-radius: 8px; display: flex; justify-content: space-between; }
+        .del-btn { color: #e74c3c; font-size: 18px; padding-left: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div class="container">
+    <div class="total-panel" id="total-panel"></div>
+
     <div class="section">
-        <div class="section-title">🏆 赢家</div>
-        <div class="grid">
-            <input type="radio" name="winner" id="w0" value="0" class="btn-check" checked onchange="refresh()"><label for="w0" class="btn-label n0">玩家A</label>
-            <input type="radio" name="winner" id="w1" value="1" class="btn-check" onchange="refresh()"><label for="w1" class="btn-label n1">玩家B</label>
-            <input type="radio" name="winner" id="w2" value="2" class="btn-check" onchange="refresh()"><label for="w2" class="btn-label n2">玩家C</label>
-            <input type="radio" name="winner" id="w3" value="3" class="btn-check" onchange="refresh()"><label for="w3" class="btn-label n3">玩家D</label>
+        <div class="section-title"><span>👤 玩家 (使用箭头调整座位)</span></div>
+        <div id="name-list-container" class="name-grid"></div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span>🏆 赢家 (炸胡时选炸胡者)</span></div>
+        <div class="grid" id="winner-grid"></div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">
+            <span>🏠 庄家</span>
+            <div style="font-size:11px;color:#3498db" onclick="passDealer()">下家上庄 ↻</div>
         </div>
+        <div class="grid" id="dealer-grid"></div>
     </div>
 
     <div class="section">
-        <div class="section-title">🏠 庄家</div>
-        <div class="grid">
-            <input type="radio" name="dealer" id="d0" value="0" class="btn-check" checked onchange="refresh()"><label for="d0" class="btn-label n0">玩家A</label>
-            <input type="radio" name="dealer" id="d1" value="1" class="btn-check" onchange="refresh()"><label for="d1" class="btn-label n1">玩家B</label>
-            <input type="radio" name="dealer" id="d2" value="2" class="btn-check" onchange="refresh()"><label for="d2" class="btn-label n2">玩家C</label>
-            <input type="radio" name="dealer" id="d3" value="3" class="btn-check" onchange="refresh()"><label for="d3" class="btn-label n3">玩家D</label>
+        <div class="section-title"><span>🔫 点炮者 (不点选则为自摸)</span></div>
+        <div class="grid" id="loser-grid"></div>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span>⚙️ 胡牌类型</span></div>
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap:8px;">
+            <input type="radio" name="winType" id="t1" value="1" class="btn-check" checked onchange="calculate()"><label for="t1" class="btn-label">小夹 (1x)</label>
+            <input type="radio" name="winType" id="t2" value="2" class="btn-check" onchange="calculate()"><label for="t2" class="btn-label">自摸夹 (2x)</label>
+            <input type="radio" name="winType" id="t3" value="4" class="btn-check" onchange="calculate()"><label for="t3" class="btn-label">搂宝 (4x)</label>
+            <input type="radio" name="winType" id="t4" value="8" class="btn-check" onchange="calculate()"><label for="t4" class="btn-label">宝中宝 (8x)</label>
         </div>
-    </div>
-
-    <div class="section">
-        <div class="section-title">🔫 点炮者 (仅限未听牌包三家)</div>
-        <div class="grid" id="loser-group"></div>
-    </div>
-
-    <div class="section">
-        <div class="section-title">⚙️ 胡牌类型</div>
-        <div class="grid type-grid">
-            <input type="radio" name="winType" id="t1" value="1" class="btn-check" checked onchange="refresh()"><label for="t1" class="btn-label">小夹 (1x)</label>
-            <input type="radio" name="winType" id="t2" value="2" class="btn-check" onchange="refresh()"><label for="t2" class="btn-label">自摸夹 (2x)</label>
-            <input type="radio" name="winType" id="t3" value="4" class="btn-check" onchange="refresh()"><label for="t3" class="btn-label">搂宝 (4x)</label>
-            <input type="radio" name="winType" id="t4" value="8" class="btn-check" onchange="refresh()"><label for="t4" class="btn-label">宝中宝 (8x)</label>
-        </div>
-        <label class="mqq-box"><input type="checkbox" id="mqq" onchange="refresh()"> <b>门前清 (整体 x2)</b></label>
-        <label class="mqq-box qys-box"><input type="checkbox" id="qys" onchange="refresh()"> <b>清一色 (整体 x2)</b></label>
-    </div>
-
-    <div class="section">
-        <div class="section-title">👤 修改姓名</div>
-        <div class="name-grid">
-            <input type="text" class="name-input" value="玩家A" oninput="updateNames(0, this.value)">
-            <input type="text" class="name-input" value="玩家B" oninput="updateNames(1, this.value)">
-            <input type="text" class="name-input" value="玩家C" oninput="updateNames(2, this.value)">
-            <input type="text" class="name-input" value="玩家D" oninput="updateNames(3, this.value)">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top:8px;">
+            <label class="mqq-box"><input type="checkbox" id="mqq" onchange="calculate()">&nbsp;门清 x2</label>
+            <label class="mqq-box qys-box"><input type="checkbox" id="qys" onchange="calculate()">&nbsp;清一色 x2</label>
         </div>
     </div>
 
     <div id="result"></div>
-    <div class="hint">无：代表自摸或胡上听者。点炮包三家时固定为“小夹”。</div>
+    
+    <div class="btn-group">
+        <button class="action-btn" onclick="recordGame(false)">确认记录战报</button>
+        <button class="action-btn zh-btn" onclick="recordGame(true)">炸胡结算</button>
+    </div>
+
+    <div class="section">
+        <div class="section-title"><span>📜 历史复盘</span> <div style="font-size:11px;color:#e74c3c" onclick="clearHistory()">清空</div></div>
+        <div class="history-list" id="history-list"></div>
+    </div>
 </div>
 
 <script>
-    let playerNames = ["玩家A", "玩家B", "玩家C", "玩家D"];
+    let players = JSON.parse(localStorage.getItem('mj_p_v7')) || [
+        { id: 101, name: "李大嘴" }, { id: 102, name: "丫蛋儿" }, { id: 103, name: "王大白" }, { id: 104, name: "锅大侠" }
+    ];
+    let history = JSON.parse(localStorage.getItem('mj_h_v7')) || [];
+    let currentScores = {};
 
-    function updateNames(index, val) {
-        playerNames[index] = val;
-        document.querySelectorAll(`.n${index}`).forEach(el => el.innerText = val);
-        refresh();
+    function save() {
+        localStorage.setItem('mj_p_v7', JSON.stringify(players));
+        localStorage.setItem('mj_h_v7', JSON.stringify(history));
     }
 
-    function refresh() {
-        const winner = parseInt(document.querySelector('input[name="winner"]:checked').value);
-        const loserGroup = document.getElementById('loser-group');
-        const currentLoserEl = document.querySelector('input[name="loser"]:checked');
-        let currentLoserVal = currentLoserEl ? currentLoserEl.value : "-1";
-        
-        if(parseInt(currentLoserVal) === winner) currentLoserVal = "-1";
-
-        let html = '';
-        playerNames.forEach((name, i) => {
-            if (i !== winner) {
-                html += `<input type="radio" name="loser" id="l${i}" value="${i}" class="btn-check" ${currentLoserVal == i ? 'checked' : ''} onchange="refresh()">
-                         <label for="l${i}" class="btn-label n${i}">${name}</label>`;
-            }
-        });
-        html += `<input type="radio" name="loser" id="l-1" value="-1" class="btn-check" ${currentLoserVal == -1 ? 'checked' : ''} onchange="refresh()">
-                 <label for="l-1" class="btn-label">无</label>`;
-        loserGroup.innerHTML = html;
-
-        handleWinTypeStatus();
+    function updateUI() {
+        renderNameList();
+        renderSelection('winner', 'winner-grid');
+        renderSelection('dealer', 'dealer-grid');
+        updateLoserOptions();
         calculate();
+        renderHistory();
     }
 
-    function handleWinTypeStatus() {
-        const loserEl = document.querySelector('input[name="loser"]:checked');
-        const loser = loserEl ? parseInt(loserEl.value) : -1;
-        const types = [document.getElementById('t2'), document.getElementById('t3'), document.getElementById('t4')];
-        
-        if (loser !== -1) {
-            // 点炮状态：强制选中小夹，禁用其他
-            document.getElementById('t1').checked = true;
-            types.forEach(t => t.disabled = true);
-        } else {
-            // 非点炮状态：恢复可用
-            types.forEach(t => t.disabled = false);
-        }
+    function renderNameList() {
+        const container = document.getElementById('name-list-container');
+        container.innerHTML = players.map((p, i) => `
+            <div class="name-item">
+                <button class="move-btn" onclick="movePlayer(${i}, -1)" ${i === 0 ? 'disabled' : ''}>▲</button>
+                <input type="text" class="name-input" value="${p.name}" oninput="syncNames(${i}, this.value)">
+                <button class="move-btn" onclick="movePlayer(${i}, 1)" ${i === 3 ? 'disabled' : ''}>▼</button>
+            </div>
+        `).join('');
+    }
+
+    function movePlayer(index, direction) {
+        const targetIndex = index + direction;
+        if (targetIndex < 0 || targetIndex >= players.length) return;
+        const temp = players[index]; players[index] = players[targetIndex]; players[targetIndex] = temp;
+        save(); updateUI();
+    }
+
+    function syncNames(index, newName) {
+        const pId = players[index].id; players[index].name = newName;
+        document.querySelectorAll(`.l-id-${pId}`).forEach(el => el.innerText = newName);
+        document.querySelectorAll(`.p-name-id-${pId}`).forEach(el => {
+            el.innerHTML = el.querySelector('.dealer-tag') ? `<b>${newName}</b><span class="dealer-tag">庄</span>` : `<b>${newName}</b>`;
+        });
+        save(); renderTotals(); calculate();
+    }
+
+    function renderSelection(name, containerId) {
+        const container = document.getElementById(containerId);
+        const currentVal = document.querySelector(`input[name="${name}"]:checked`)?.value || players[0].id;
+        container.innerHTML = players.map(p => `
+            <input type="radio" name="${name}" id="${name}${p.id}" value="${p.id}" class="btn-check" ${currentVal == p.id ? 'checked' : ''} onchange="refreshLogic('${name}')">
+            <label for="${name}${p.id}" class="btn-label l-id-${p.id}">${p.name}</label>
+        `).join('');
+    }
+
+    function updateLoserOptions() {
+        const winnerId = parseInt(document.querySelector('input[name="winner"]:checked')?.value || players[0].id);
+        const container = document.getElementById('loser-grid');
+        const currentLoser = document.querySelector('input[name="loser"]:checked')?.value || "-1";
+        let html = players.filter(p => p.id !== winnerId).map(p => `
+            <input type="radio" name="loser" id="l${p.id}" value="${p.id}" class="btn-check" ${currentLoser == p.id ? 'checked' : ''} onchange="calculate()">
+            <label for="l${p.id}" class="btn-label l-id-${p.id}">${p.name}</label>
+        `).join('');
+        html += `<input type="radio" name="loser" id="l-1" value="-1" class="btn-check" ${currentLoser == "-1" ? 'checked' : ''} onchange="calculate()">
+                 <label for="l-1" class="btn-label">无</label>`;
+        container.innerHTML = html;
     }
 
     function calculate() {
-        const dealer = parseInt(document.querySelector('input[name="dealer"]:checked').value);
-        const winner = parseInt(document.querySelector('input[name="winner"]:checked').value);
-        const loserEl = document.querySelector('input[name="loser"]:checked');
-        const loser = loserEl ? parseInt(loserEl.value) : -1;
-        const baseLevel = parseInt(document.querySelector('input[name="winType"]:checked').value);
-        const isMqq = document.getElementById('mqq').checked;
-        const isQys = document.getElementById('qys').checked;
+        const winId = parseInt(document.querySelector('input[name="winner"]:checked')?.value || players[0].id);
+        const dealId = parseInt(document.querySelector('input[name="dealer"]:checked')?.value || players[0].id);
+        const loseId = parseInt(document.querySelector('input[name="loser"]:checked')?.value || -1);
+        
+        const typeInputs = [document.getElementById('t1'), document.getElementById('t2'), document.getElementById('t3'), document.getElementById('t4')];
+        if (loseId !== -1) { document.getElementById('t1').checked = true; typeInputs.slice(1).forEach(i => i.disabled = true); } 
+        else { typeInputs.forEach(i => i.disabled = false); }
 
-        let scores = [0, 0, 0, 0];
+        const base = parseInt(document.querySelector('input[name="winType"]:checked').value);
+        const mqq = document.getElementById('mqq').checked ? 2 : 1;
+        const qys = document.getElementById('qys').checked ? 2 : 1;
+
+        let scores = {}; players.forEach(p => scores[p.id] = 0);
         let totalWin = 0;
 
-        for (let i = 0; i < 4; i++) {
-            if (i === winner) continue;
-
-            // 庄闲判定
-            let multiplier = (i === dealer || winner === dealer) ? 2 : 1;
-            let pay = baseLevel * multiplier;
-
-            // 整体翻倍项
-            if (isMqq) pay *= 2;
-            if (isQys) pay *= 2;
-
-            scores[i] = -pay;
+        players.forEach(p => {
+            if (p.id === winId) return;
+            let mult = (p.id === dealId || winId === dealId) ? 2 : 1;
+            let pay = base * mult * mqq * qys;
+            scores[p.id] = -pay;
             totalWin += pay;
-        }
-
-        // 点炮包三家逻辑
-        if (loser !== -1) {
-            for (let i = 0; i < 4; i++) if (i !== winner) scores[i] = 0;
-            scores[loser] = -totalWin;
-        }
-        scores[winner] = totalWin;
-
-        let resHtml = "";
-        scores.forEach((s, i) => {
-            resHtml += `
-                <div class="score-card ${s >= 0 ? 'win-item' : 'lose-item'}">
-                    <span><b>${playerNames[i]}</b>${i === dealer ? '<span class="dealer-tag">庄</span>' : ''}</span>
-                    <span class="score-val">${s > 0 ? '+' : ''}${s}</span>
-                </div>`;
         });
-        document.getElementById('result').innerHTML = resHtml;
+
+        if (loseId !== -1) {
+            players.forEach(p => { if(p.id !== winId) scores[p.id] = 0; });
+            scores[loseId] = -totalWin;
+        }
+        scores[winId] = totalWin;
+        currentScores = scores;
+
+        document.getElementById('result').innerHTML = players.map(p => `
+            <div class="score-card ${scores[p.id] >= 0 ? 'win-item' : 'lose-item'}">
+                <span class="p-name-id-${p.id}"><b>${p.name}</b>${p.id === dealId ? '<span class="dealer-tag">庄</span>' : ''}</span>
+                <span class="score-val">${scores[p.id] > 0 ? '+' : ''}${scores[p.id]}</span>
+            </div>
+        `).join('');
+        renderTotals();
     }
 
-    refresh();
+    function renderTotals() {
+        const totals = {}; players.forEach(p => totals[p.id] = 0);
+        history.forEach(round => {
+            Object.keys(round.scores).forEach(id => { if(totals[id] !== undefined) totals[id] += round.scores[id]; });
+        });
+        document.getElementById('total-panel').innerHTML = players.map(p => `
+            <div class="total-item"><div class="p-name-id-${p.id}">${p.name}</div><div style="color:${totals[p.id]>=0?'#ff7675':'#55efc4'}">${totals[p.id]>0?'+':''}${totals[p.id]}</div></div>
+        `).join('');
+    }
+
+    function recordGame(isZh) {
+        const winId = parseInt(document.querySelector('input[name="winner"]:checked').value);
+        const typeText = document.querySelector(`label[for="${document.querySelector('input[name="winType"]:checked').id}"]`).innerText;
+        
+        let finalScores = {...currentScores};
+        if(isZh) {
+            // 炸胡逻辑：分数反转
+            Object.keys(finalScores).forEach(id => finalScores[id] = -finalScores[id]);
+        }
+
+        history.unshift({
+            id: Date.now(),
+            winName: players.find(p => p.id === winId).name,
+            type: isZh ? "炸胡" : typeText,
+            isZh: isZh,
+            scores: finalScores,
+            time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+        });
+        save(); renderHistory(); calculate(); window.scrollTo(0,0);
+    }
+
+    function renderHistory() {
+        document.getElementById('history-list').innerHTML = history.map(h => {
+            const detail = players.map(p => {
+                const s = h.scores[p.id] || 0;
+                return `<span style="color:${s>0?'#e74c3c':(s<0?'#27ae60':'#999')}">${p.name.charAt(0)}:${s>0?'+':''}${s}</span>`;
+            }).join(' ');
+            return `
+                <div class="history-item">
+                    <div class="history-main">
+                        <div>
+                            <span class="history-tag ${h.isZh?'zh-tag':''}">${h.isZh?'⚠ 炸胡':h.time}</span>
+                            <b style="color:var(--win-text);margin-left:5px">${h.winName}</b>
+                            <span style="font-size:11px;color:#999"> · ${h.type}</span>
+                        </div>
+                        <div class="del-btn" onclick="deleteHistory(${h.id})">×</div>
+                    </div>
+                    <div class="history-detail-bar">${detail}</div>
+                </div>`;
+        }).join('');
+    }
+
+    function deleteHistory(id) { if(confirm('删除此条？')){ history = history.filter(h => h.id !== id); save(); calculate(); renderHistory(); } }
+    function clearHistory() { if(confirm('清空记录？')){ history = []; save(); calculate(); renderHistory(); } }
+    function refreshLogic(t) { if(t==='winner') updateLoserOptions(); calculate(); }
+    function passDealer() {
+        const cur = parseInt(document.querySelector('input[name="dealer"]:checked').value);
+        const idx = players.findIndex(p => p.id === cur);
+        document.getElementById(`dealer${players[(idx+1)%4].id}`).checked = true;
+        calculate();
+    }
+    updateUI();
 </script>
 </body>
 </html>
