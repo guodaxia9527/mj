@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>麻将结算器-正式版</title>
+    <style>
+        :root { --primary: #2c3e50; --win-text: #e74c3c; --lose-text: #27ae60; --bg: #f4f7f6; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 10px; }
+        .container { max-width: 480px; margin: auto; background: white; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); padding: 15px; }
+        
+        .section { margin-bottom: 12px; padding: 12px; border: 1px solid #eee; border-radius: 15px; background: #fff; }
+        .section-title { font-size: 13px; color: #7f8c8d; margin-bottom: 10px; font-weight: bold; display: flex; align-items: center; }
+        .section-title::before { content: ""; display: inline-block; width: 4px; height: 14px; background: var(--primary); margin-right: 8px; border-radius: 2px; }
+
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .type-grid { grid-template-columns: repeat(2, 1fr); }
+        .btn-check { display: none; }
+        .btn-label { display: block; padding: 12px 2px; text-align: center; background: #f8f9fa; border: 1px solid #eee; border-radius: 10px; cursor: pointer; font-size: 14px; transition: 0.2s; }
+        .btn-check:checked + .btn-label { background: var(--primary); color: white; border-color: var(--primary); font-weight: bold; }
+        
+        /* 禁用样式 */
+        .btn-check:disabled + .btn-label { opacity: 0.3; cursor: not-allowed; background: #eee; color: #999; }
+
+        .mqq-box { display: flex; align-items: center; justify-content: center; padding: 15px; background: #fff9db; border-radius: 10px; margin-top: 10px; cursor: pointer; border: 1px solid #ffe066; }
+        .mqq-box input { width: 20px; height: 20px; margin-right: 12px; }
+        .qys-box { background: #e3f2fd; border: 1px solid #90caf9; color: #1976d2; }
+
+        .name-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 5px; }
+        .name-input { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 8px 0; text-align: center; font-size: 12px; box-sizing: border-box; }
+
+        #result { margin-top: 15px; }
+        .score-card { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-radius: 12px; margin-bottom: 8px; border: 1px solid #eee; }
+        .win-item { background: #fff5f5; color: var(--win-text); border-color: #ffdada; }
+        .lose-item { background: #f0fff4; color: var(--lose-text); border-color: #dcf5e1; }
+        .score-val { font-weight: 900; font-size: 24px; }
+        .dealer-tag { font-size: 11px; background: #f39c12; color: white; padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
+        .hint { font-size: 11px; color: #bdc3c7; margin-top: 8px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="section">
+        <div class="section-title">🏆 赢家</div>
+        <div class="grid">
+            <input type="radio" name="winner" id="w0" value="0" class="btn-check" checked onchange="refresh()"><label for="w0" class="btn-label n0">玩家A</label>
+            <input type="radio" name="winner" id="w1" value="1" class="btn-check" onchange="refresh()"><label for="w1" class="btn-label n1">玩家B</label>
+            <input type="radio" name="winner" id="w2" value="2" class="btn-check" onchange="refresh()"><label for="w2" class="btn-label n2">玩家C</label>
+            <input type="radio" name="winner" id="w3" value="3" class="btn-check" onchange="refresh()"><label for="w3" class="btn-label n3">玩家D</label>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">🏠 庄家</div>
+        <div class="grid">
+            <input type="radio" name="dealer" id="d0" value="0" class="btn-check" checked onchange="refresh()"><label for="d0" class="btn-label n0">玩家A</label>
+            <input type="radio" name="dealer" id="d1" value="1" class="btn-check" onchange="refresh()"><label for="d1" class="btn-label n1">玩家B</label>
+            <input type="radio" name="dealer" id="d2" value="2" class="btn-check" onchange="refresh()"><label for="d2" class="btn-label n2">玩家C</label>
+            <input type="radio" name="dealer" id="d3" value="3" class="btn-check" onchange="refresh()"><label for="d3" class="btn-label n3">玩家D</label>
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">🔫 点炮者 (仅限未听牌包三家)</div>
+        <div class="grid" id="loser-group"></div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">⚙️ 胡牌类型</div>
+        <div class="grid type-grid">
+            <input type="radio" name="winType" id="t1" value="1" class="btn-check" checked onchange="refresh()"><label for="t1" class="btn-label">小夹 (1x)</label>
+            <input type="radio" name="winType" id="t2" value="2" class="btn-check" onchange="refresh()"><label for="t2" class="btn-label">自摸夹 (2x)</label>
+            <input type="radio" name="winType" id="t3" value="4" class="btn-check" onchange="refresh()"><label for="t3" class="btn-label">搂宝 (4x)</label>
+            <input type="radio" name="winType" id="t4" value="8" class="btn-check" onchange="refresh()"><label for="t4" class="btn-label">宝中宝 (8x)</label>
+        </div>
+        <label class="mqq-box"><input type="checkbox" id="mqq" onchange="refresh()"> <b>门前清 (整体 x2)</b></label>
+        <label class="mqq-box qys-box"><input type="checkbox" id="qys" onchange="refresh()"> <b>清一色 (整体 x2)</b></label>
+    </div>
+
+    <div class="section">
+        <div class="section-title">👤 修改姓名</div>
+        <div class="name-grid">
+            <input type="text" class="name-input" value="玩家A" oninput="updateNames(0, this.value)">
+            <input type="text" class="name-input" value="玩家B" oninput="updateNames(1, this.value)">
+            <input type="text" class="name-input" value="玩家C" oninput="updateNames(2, this.value)">
+            <input type="text" class="name-input" value="玩家D" oninput="updateNames(3, this.value)">
+        </div>
+    </div>
+
+    <div id="result"></div>
+    <div class="hint">无：代表自摸或胡上听者。点炮包三家时固定为“小夹”。</div>
+</div>
+
+<script>
+    let playerNames = ["玩家A", "玩家B", "玩家C", "玩家D"];
+
+    function updateNames(index, val) {
+        playerNames[index] = val;
+        document.querySelectorAll(`.n${index}`).forEach(el => el.innerText = val);
+        refresh();
+    }
+
+    function refresh() {
+        const winner = parseInt(document.querySelector('input[name="winner"]:checked').value);
+        const loserGroup = document.getElementById('loser-group');
+        const currentLoserEl = document.querySelector('input[name="loser"]:checked');
+        let currentLoserVal = currentLoserEl ? currentLoserEl.value : "-1";
+        
+        if(parseInt(currentLoserVal) === winner) currentLoserVal = "-1";
+
+        let html = '';
+        playerNames.forEach((name, i) => {
+            if (i !== winner) {
+                html += `<input type="radio" name="loser" id="l${i}" value="${i}" class="btn-check" ${currentLoserVal == i ? 'checked' : ''} onchange="refresh()">
+                         <label for="l${i}" class="btn-label n${i}">${name}</label>`;
+            }
+        });
+        html += `<input type="radio" name="loser" id="l-1" value="-1" class="btn-check" ${currentLoserVal == -1 ? 'checked' : ''} onchange="refresh()">
+                 <label for="l-1" class="btn-label">无</label>`;
+        loserGroup.innerHTML = html;
+
+        handleWinTypeStatus();
+        calculate();
+    }
+
+    function handleWinTypeStatus() {
+        const loserEl = document.querySelector('input[name="loser"]:checked');
+        const loser = loserEl ? parseInt(loserEl.value) : -1;
+        const types = [document.getElementById('t2'), document.getElementById('t3'), document.getElementById('t4')];
+        
+        if (loser !== -1) {
+            // 点炮状态：强制选中小夹，禁用其他
+            document.getElementById('t1').checked = true;
+            types.forEach(t => t.disabled = true);
+        } else {
+            // 非点炮状态：恢复可用
+            types.forEach(t => t.disabled = false);
+        }
+    }
+
+    function calculate() {
+        const dealer = parseInt(document.querySelector('input[name="dealer"]:checked').value);
+        const winner = parseInt(document.querySelector('input[name="winner"]:checked').value);
+        const loserEl = document.querySelector('input[name="loser"]:checked');
+        const loser = loserEl ? parseInt(loserEl.value) : -1;
+        const baseLevel = parseInt(document.querySelector('input[name="winType"]:checked').value);
+        const isMqq = document.getElementById('mqq').checked;
+        const isQys = document.getElementById('qys').checked;
+
+        let scores = [0, 0, 0, 0];
+        let totalWin = 0;
+
+        for (let i = 0; i < 4; i++) {
+            if (i === winner) continue;
+
+            // 庄闲判定
+            let multiplier = (i === dealer || winner === dealer) ? 2 : 1;
+            let pay = baseLevel * multiplier;
+
+            // 整体翻倍项
+            if (isMqq) pay *= 2;
+            if (isQys) pay *= 2;
+
+            scores[i] = -pay;
+            totalWin += pay;
+        }
+
+        // 点炮包三家逻辑
+        if (loser !== -1) {
+            for (let i = 0; i < 4; i++) if (i !== winner) scores[i] = 0;
+            scores[loser] = -totalWin;
+        }
+        scores[winner] = totalWin;
+
+        let resHtml = "";
+        scores.forEach((s, i) => {
+            resHtml += `
+                <div class="score-card ${s >= 0 ? 'win-item' : 'lose-item'}">
+                    <span><b>${playerNames[i]}</b>${i === dealer ? '<span class="dealer-tag">庄</span>' : ''}</span>
+                    <span class="score-val">${s > 0 ? '+' : ''}${s}</span>
+                </div>`;
+        });
+        document.getElementById('result').innerHTML = resHtml;
+    }
+
+    refresh();
+</script>
+</body>
+</html>
