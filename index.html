@@ -6,6 +6,23 @@
     <title>麻将结算器-全能规则版</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+	
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" type="image/svg+xml" href="./icon.svg">
+    <link rel="apple-touch-icon" href="./icon.svg">
+
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            // 明确 scope，确保在 GitHub Pages 子目录下也能运行
+            navigator.serviceWorker.register('./sw.js', { scope: './' })
+                .then(reg => console.log('PWA 注册成功'))
+                .catch(err => console.error('PWA 注册失败', err));
+        });
+    }
+</script>
+
     <style>
         :root { --primary: #2c3e50; --win-text: #e74c3c; --lose-text: #27ae60; --bg: #f4f7f6; --zh-color: #c0392b; }
         * { -webkit-touch-callout: none; -webkit-user-select: none; touch-action: manipulation; box-sizing: border-box; }
@@ -80,20 +97,20 @@
     </div>
 
     <div class="section">
-        <div class="section-title"><span>🔫 点炮者 (不点选则为自摸)</span></div>
+        <div class="section-title"><span>🔫 点炮者</span></div>
         <div class="grid" id="loser-grid"></div>
     </div>
 
     <div class="section">
         <div class="section-title"><span>⚙️ 胡牌类型</span></div>
         <div class="grid" style="grid-template-columns: 1fr 1fr; gap:8px;">
-            <input type="radio" name="winType" id="t1" value="1" class="btn-check" checked onchange="calculate()"><label for="t1" class="btn-label">小夹 (1x)</label>
-            <input type="radio" name="winType" id="t2" value="2" class="btn-check" onchange="calculate()"><label for="t2" class="btn-label">自摸夹 (2x)</label>
+            <input type="radio" name="winType" id="t1" value="1" class="btn-check" checked onchange="calculate()"><label for="t1" class="btn-label">屁胡 (1x)</label>
+            <input type="radio" name="winType" id="t2" value="2" class="btn-check" onchange="calculate()"><label for="t2" class="btn-label">自摸 (2x)</label>
             <input type="radio" name="winType" id="t3" value="4" class="btn-check" onchange="calculate()"><label for="t3" class="btn-label">搂宝 (4x)</label>
             <input type="radio" name="winType" id="t4" value="8" class="btn-check" onchange="calculate()"><label for="t4" class="btn-label">宝中宝 (8x)</label>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top:8px;">
-            <label class="mqq-box"><input type="checkbox" id="mqq" onchange="calculate()">&nbsp;门清 x2</label>
+            <label class="mqq-box"><input type="checkbox" id="mqq" onchange="calculate()">&nbsp;门前清 x2</label>
             <label class="mqq-box qys-box"><input type="checkbox" id="qys" onchange="calculate()">&nbsp;清一色 x2</label>
         </div>
     </div>
@@ -101,7 +118,7 @@
     <div id="result"></div>
     
     <div class="btn-group">
-        <button class="action-btn" onclick="recordGame(false)">确认记录战报</button>
+        <button class="action-btn" onclick="recordGame(false)">确认记录</button>
         <button class="action-btn zh-btn" onclick="recordGame(true)">炸胡结算</button>
     </div>
 
