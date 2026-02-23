@@ -1,7 +1,7 @@
 {
-  "name": "海伦伦河麻将结算器",
-  "short_name": "结算器",
-  "description": "专业东北麻将带宝结算工具",
+  "name": "黑龙江麻将结算器",
+  "short_name": "海伦麻将结算器",
+  "description": "一种东北麻将带宝结算工具。也能记录每局分数",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",
