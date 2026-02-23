@@ -6,25 +6,24 @@
     <title>麻将结算器-全能规则版</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-	
+    
     <meta name="mobile-web-app-capable" content="yes">
     <link rel="manifest" href="./manifest.json">
     <link rel="icon" type="image/svg+xml" href="./icon.svg">
     <link rel="apple-touch-icon" href="./icon.svg">
 
-<script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            // 明确 scope，确保在 GitHub Pages 子目录下也能运行
-            navigator.serviceWorker.register('./sw.js', { scope: './' })
-                .then(reg => console.log('PWA 注册成功'))
-                .catch(err => console.error('PWA 注册失败', err));
-        });
-    }
-</script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js', { scope: './' })
+                    .then(reg => console.log('PWA 注册成功'))
+                    .catch(err => console.error('PWA 注册失败', err));
+            });
+        }
+    </script>
 
     <style>
-        :root { --primary: #2c3e50; --win-text: #e74c3c; --lose-text: #27ae60; --bg: #f4f7f6; --zh-color: #c0392b; }
+        :root { --primary: #2c3e50; --win-text: #e74c3c; --lose-text: #27ae60; --bg: #f4f7f6; --zh-color: #c0392b; --wechat: #07c160; }
         * { -webkit-touch-callout: none; -webkit-user-select: none; touch-action: manipulation; box-sizing: border-box; }
         input { -webkit-user-select: auto; }
         
@@ -36,8 +35,12 @@
         .total-item div:last-child { font-size: 18px; font-weight: 900; font-family: monospace; }
 
         .section { margin-bottom: 12px; padding: 12px; border: 1px solid #eee; border-radius: 15px; background: #fff; }
-        .section-title { font-size: 13px; color: #7f8c8d; margin-bottom: 10px; font-weight: bold; display: flex; align-items: center; justify-content: space-between; }
+        .section-title { font-size: 13px; color: #7f8c8d; margin-bottom: 10px; font-weight: bold; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
         .section-title span::before { content: ""; display: inline-block; width: 4px; height: 14px; background: var(--primary); margin-right: 8px; border-radius: 2px; vertical-align: middle; }
+        
+        .fold-arrow { transition: transform 0.3s; font-size: 10px; color: #bdc3c7; }
+        .folded .fold-arrow { transform: rotate(-90deg); }
+        .folded #name-list-container { display: none; }
 
         .name-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
         .name-item { display: flex; align-items: center; background: #f8f9fa; border-radius: 10px; padding: 4px 10px; border: 1px solid #eee; }
@@ -71,6 +74,9 @@
         .zh-tag { background: var(--zh-color); color: white; }
         .history-detail-bar { font-size: 11px; color: #7f8c8d; background: #f9f9f9; padding: 6px 10px; border-radius: 8px; display: flex; justify-content: space-between; }
         .del-btn { color: #e74c3c; font-size: 18px; padding-left: 10px; cursor: pointer; }
+
+        .title-actions { display: flex; gap: 12px; align-items: center; }
+        .action-link { font-size: 11px; font-weight: normal; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -78,8 +84,11 @@
 <div class="container">
     <div class="total-panel" id="total-panel"></div>
 
-    <div class="section">
-        <div class="section-title"><span>👤 玩家 (使用箭头调整座位)</span></div>
+    <div class="section" id="player-section">
+        <div class="section-title" onclick="toggleNames()">
+            <span>👤 玩家 (使用箭头调整座位)</span>
+            <span class="fold-arrow">▼</span>
+        </div>
         <div id="name-list-container" class="name-grid"></div>
     </div>
 
@@ -123,7 +132,13 @@
     </div>
 
     <div class="section">
-        <div class="section-title"><span>📜 历史复盘</span> <div style="font-size:11px;color:#e74c3c" onclick="clearHistory()">清空</div></div>
+        <div class="section-title">
+            <span id="history-title-text">📜 历史复盘 (共0局)</span>
+            <div class="title-actions">
+                <div class="action-link" style="color:var(--wechat)" onclick="copyReport()">🟢 分享战报</div>
+                <div class="action-link" style="color:#e74c3c" onclick="clearHistory()">清空</div>
+            </div>
+        </div>
         <div class="history-list" id="history-list"></div>
     </div>
 </div>
@@ -140,6 +155,10 @@
         localStorage.setItem('mj_h_v7', JSON.stringify(history));
     }
 
+    function toggleNames() {
+        document.getElementById('player-section').classList.toggle('folded');
+    }
+
     function updateUI() {
         renderNameList();
         renderSelection('winner', 'winner-grid');
@@ -147,6 +166,8 @@
         updateLoserOptions();
         calculate();
         renderHistory();
+        // 更新总对局数显示
+        document.getElementById('history-title-text').innerText = `📜 历史复盘 (共${history.length}局)`;
     }
 
     function renderNameList() {
@@ -250,23 +271,25 @@
 
     function recordGame(isZh) {
         const winId = parseInt(document.querySelector('input[name="winner"]:checked').value);
+        const dealId = parseInt(document.querySelector('input[name="dealer"]:checked').value);
+        const loseId = parseInt(document.querySelector('input[name="loser"]:checked').value);
         const typeText = document.querySelector(`label[for="${document.querySelector('input[name="winType"]:checked').id}"]`).innerText;
         
         let finalScores = {...currentScores};
-        if(isZh) {
-            // 炸胡逻辑：分数反转
-            Object.keys(finalScores).forEach(id => finalScores[id] = -finalScores[id]);
-        }
+        if(isZh) { Object.keys(finalScores).forEach(id => finalScores[id] = -finalScores[id]); }
 
         history.unshift({
             id: Date.now(),
             winName: players.find(p => p.id === winId).name,
+            winId: winId,
+            dealerId: dealId,
+            loserId: loseId,
             type: isZh ? "炸胡" : typeText,
             isZh: isZh,
             scores: finalScores,
             time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
         });
-        save(); renderHistory(); calculate(); window.scrollTo(0,0);
+        save(); updateUI(); window.scrollTo(0,0);
     }
 
     function renderHistory() {
@@ -290,8 +313,56 @@
         }).join('');
     }
 
-    function deleteHistory(id) { if(confirm('删除此条？')){ history = history.filter(h => h.id !== id); save(); calculate(); renderHistory(); } }
-    function clearHistory() { if(confirm('清空记录？')){ history = []; save(); calculate(); renderHistory(); } }
+    function copyReport() {
+        if (history.length === 0) return alert("暂无记录可分享");
+        
+        let stats = {};
+        players.forEach(p => stats[p.id] = { total: 0, dPao: 0, maxLz: 0, curLz: 0 });
+        
+        // 核心：正序遍历历史（从最久远的到最新）以统计连庄和总分
+        let historyCopy = [...history].reverse();
+        let lastDealer = -1;
+
+        historyCopy.forEach(h => {
+            players.forEach(p => stats[p.id].total += (h.scores[p.id] || 0));
+            if (h.loserId !== -1) stats[h.loserId].dPao++;
+            
+            // 连庄统计逻辑
+            if (h.dealerId === lastDealer) {
+                stats[h.dealerId].curLz++;
+                stats[h.dealerId].maxLz = Math.max(stats[h.dealerId].maxLz, stats[h.dealerId].curLz);
+            } else {
+                if (lastDealer !== -1) stats[lastDealer].curLz = 0;
+                lastDealer = h.dealerId;
+            }
+        });
+
+        let sorted = [...players].sort((a,b) => stats[b.id].total - stats[a.id].total);
+        let dpWang = [...players].sort((a,b) => stats[b.id].dPao - stats[a.id].dPao)[0];
+        let lzWang = [...players].sort((a,b) => stats[b.id].maxLz - stats[a.id].maxLz)[0];
+
+        let text = `🀄 【海伦麻将结算单】\n📅 ${new Date().toLocaleDateString()} (共${history.length}局)\n-----------------------\n🏆 累计总分榜\n`;
+        sorted.forEach((p, i) => {
+            let t = stats[p.id].total;
+            text += `${i===0?'🥇':(i===3?'❌':'🔹')} ${p.name}：${t>0?'+':''}${t}${i===0?' (赢家)':''}\n`;
+        });
+
+        text += `\n🎖️ 牌局英雄榜\n🔫 点炮王：${dpWang.name} (${stats[dpWang.id].dPao}次)\n🔥 连庄王：${lzWang.name} (最高连庄${stats[lzWang.id].maxLz + 1}把)\n`;
+
+        text += `\n📜 历史明细 (正序排号)\n`;
+        // 正序显示前10局（如果局数多的话），或者显示所有。这里建议正序排列。
+        historyCopy.forEach((h, i) => {
+            let detail = players.map(p => `${p.name.charAt(0)}:${h.scores[p.id]>0?'+':''}${h.scores[p.id]}`).join(',');
+            text += `${i+1}. ${h.winName}(${h.type})\n   [${detail}]\n`;
+        });
+
+        text += `-----------------------\n🔗 结算器地址：\n${window.location.href.split('?')[0]}\n✅ 数据已核对，祝下把翻盘！`;
+
+        navigator.clipboard.writeText(text).then(() => alert("✅ 结算单已复制！快去微信粘贴吧。")).catch(() => alert("复制失败，请截图分享"));
+    }
+
+    function deleteHistory(id) { if(confirm('删除此条？')){ history = history.filter(h => h.id !== id); save(); updateUI(); } }
+    function clearHistory() { if(confirm('清空记录？')){ history = []; save(); updateUI(); } }
     function refreshLogic(t) { if(t==='winner') updateLoserOptions(); calculate(); }
     function passDealer() {
         const cur = parseInt(document.querySelector('input[name="dealer"]:checked').value);
