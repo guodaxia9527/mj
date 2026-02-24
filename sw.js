@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mj-v8-cache'; // 升级版本号
+const CACHE_NAME = 'mj-v9-cache'; // 升级版本号
 const ASSETS = [
     './index.html',
     './manifest.json',
@@ -16,4 +16,5 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(
         caches.match(e.request).then(res => res || fetch(e.request))
     );
+
 });
