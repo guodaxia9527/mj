@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>麻将结算器-全能规则版</title>
+    <title>海伦麻将结算器</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     
@@ -77,6 +77,10 @@
 
         .title-actions { display: flex; gap: 12px; align-items: center; }
         .action-link { font-size: 11px; font-weight: normal; cursor: pointer; }
+        
+        /* 统计栏样式 */
+        .footer-stats { margin-top: 15px; padding-top: 10px; text-align: center; border-top: 1px dashed #f0f0f0; font-size: 10px; color: #bdc3c7; }
+        .footer-stats a { color: #3498db; text-decoration: none; margin-left: 5px; }
     </style>
 </head>
 <body>
@@ -140,12 +144,19 @@
             </div>
         </div>
         <div class="history-list" id="history-list"></div>
+        
+        <div class="footer-stats">
+            <script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+            <span>📊 累计访客: <span id="busuanzi_value_site_uv">--</span></span>
+            <span style="margin:0 5px">|</span>
+            <a href="https://v.wjx.cn/vm/r70ZA0z.aspx" target="_blank">💬 提建议</a>
+        </div>
     </div>
 </div>
 
 <script>
     let players = JSON.parse(localStorage.getItem('mj_p_v7')) || [
-        { id: 101, name: "李大嘴" }, { id: 102, name: "丫蛋儿" }, { id: 103, name: "王大白" }, { id: 104, name: "锅大侠" }
+        { id: 101, name: "玩家1" }, { id: 102, name: "玩家2" }, { id: 103, name: "玩家3" }, { id: 104, name: "玩家4" }
     ];
     let history = JSON.parse(localStorage.getItem('mj_h_v7')) || [];
     let currentScores = {};
@@ -166,7 +177,6 @@
         updateLoserOptions();
         calculate();
         renderHistory();
-        // 更新总对局数显示
         document.getElementById('history-title-text').innerText = `📜 历史复盘 (共${history.length}局)`;
     }
 
@@ -315,19 +325,15 @@
 
     function copyReport() {
         if (history.length === 0) return alert("暂无记录可分享");
-        
         let stats = {};
         players.forEach(p => stats[p.id] = { total: 0, dPao: 0, maxLz: 0, curLz: 0 });
         
-        // 核心：正序遍历历史（从最久远的到最新）以统计连庄和总分
         let historyCopy = [...history].reverse();
         let lastDealer = -1;
 
         historyCopy.forEach(h => {
             players.forEach(p => stats[p.id].total += (h.scores[p.id] || 0));
             if (h.loserId !== -1) stats[h.loserId].dPao++;
-            
-            // 连庄统计逻辑
             if (h.dealerId === lastDealer) {
                 stats[h.dealerId].curLz++;
                 stats[h.dealerId].maxLz = Math.max(stats[h.dealerId].maxLz, stats[h.dealerId].curLz);
@@ -344,13 +350,12 @@
         let text = `🀄 【海伦麻将结算单】\n📅 ${new Date().toLocaleDateString()} (共${history.length}局)\n-----------------------\n🏆 累计总分榜\n`;
         sorted.forEach((p, i) => {
             let t = stats[p.id].total;
-            text += `${i===0?'🥇':(i===3?'❌':'🔹')} ${p.name}：${t>0?'+':''}${t}${i===0?' (赢家)':''}\n`;
+            text += `${i===0?'🥇':(i===3?'🔹':'🔹')} ${p.name}：${t>0?'+':''}${t}${i===0?' (赢家)':''}\n`;
         });
 
-        text += `\n🎖️ 牌局英雄榜\n🔫 点炮王：${dpWang.name} (${stats[dpWang.id].dPao}次)\n🔥 连庄王：${lzWang.name} (最高连庄${stats[lzWang.id].maxLz + 1}把)\n`;
+        text += `\n🎖️ 牌局英雄榜\n  点炮王：${dpWang.name} (${stats[dpWang.id].dPao}次)\n  连庄王：${lzWang.name} (${stats[lzWang.id].maxLz + 1}次)\n`;
 
-        text += `\n📜 历史明细 (正序排号)\n`;
-        // 正序显示前10局（如果局数多的话），或者显示所有。这里建议正序排列。
+        text += `\n📜 历史明细 (正序)\n`;
         historyCopy.forEach((h, i) => {
             let detail = players.map(p => `${p.name.charAt(0)}:${h.scores[p.id]>0?'+':''}${h.scores[p.id]}`).join(',');
             text += `${i+1}. ${h.winName}(${h.type})\n   [${detail}]\n`;
