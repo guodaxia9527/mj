@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mj-v9-cache'; // 升级版本号
+const CACHE_NAME = 'mj-v10-cache'; // 升级版本号
 const ASSETS = [
     './index.html',
     './manifest.json',
@@ -18,3 +18,4 @@ self.addEventListener('fetch', (e) => {
     );
 
 });
+
