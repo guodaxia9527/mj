@@ -78,7 +78,6 @@
         .title-actions { display: flex; gap: 12px; align-items: center; }
         .action-link { font-size: 11px; font-weight: normal; cursor: pointer; }
         
-        /* 统计栏样式 */
         .footer-stats { margin-top: 15px; padding-top: 10px; text-align: center; border-top: 1px dashed #f0f0f0; font-size: 10px; color: #bdc3c7; }
         .footer-stats a { color: #3498db; text-decoration: none; margin-left: 5px; }
     </style>
@@ -90,7 +89,7 @@
 
     <div class="section" id="player-section">
         <div class="section-title" onclick="toggleNames()">
-            <span>👤 玩家 (使用箭头调整座位)</span>
+            <span>👤 玩家 (可改名/调整座位)</span>
             <span class="fold-arrow">▼</span>
         </div>
         <div id="name-list-container" class="name-grid"></div>
@@ -156,7 +155,7 @@
 
 <script>
     let players = JSON.parse(localStorage.getItem('mj_p_v7')) || [
-        { id: 101, name: "玩家1" }, { id: 102, name: "玩家2" }, { id: 103, name: "玩家3" }, { id: 104, name: "玩家4" }
+        { id: 101, name: "王大白" }, { id: 102, name: "丫蛋儿" }, { id: 103, name: "李大嘴" }, { id: 104, name: "锅大侠" }
     ];
     let history = JSON.parse(localStorage.getItem('mj_h_v7')) || [];
     let currentScores = {};
@@ -227,24 +226,24 @@
         html += `<input type="radio" name="loser" id="l-1" value="-1" class="btn-check" ${currentLoser == "-1" ? 'checked' : ''} onchange="calculate()">
                  <label for="l-1" class="btn-label">无</label>`;
         container.innerHTML = html;
+        if (!document.querySelector('input[name="loser"]:checked')) {
+            document.getElementById('l-1').checked = true;
+            calculate();
+        }
     }
 
     function calculate() {
         const winId = parseInt(document.querySelector('input[name="winner"]:checked')?.value || players[0].id);
         const dealId = parseInt(document.querySelector('input[name="dealer"]:checked')?.value || players[0].id);
         const loseId = parseInt(document.querySelector('input[name="loser"]:checked')?.value || -1);
-        
         const typeInputs = [document.getElementById('t1'), document.getElementById('t2'), document.getElementById('t3'), document.getElementById('t4')];
         if (loseId !== -1) { document.getElementById('t1').checked = true; typeInputs.slice(1).forEach(i => i.disabled = true); } 
         else { typeInputs.forEach(i => i.disabled = false); }
-
         const base = parseInt(document.querySelector('input[name="winType"]:checked').value);
         const mqq = document.getElementById('mqq').checked ? 2 : 1;
         const qys = document.getElementById('qys').checked ? 2 : 1;
-
         let scores = {}; players.forEach(p => scores[p.id] = 0);
         let totalWin = 0;
-
         players.forEach(p => {
             if (p.id === winId) return;
             let mult = (p.id === dealId || winId === dealId) ? 2 : 1;
@@ -252,14 +251,12 @@
             scores[p.id] = -pay;
             totalWin += pay;
         });
-
         if (loseId !== -1) {
             players.forEach(p => { if(p.id !== winId) scores[p.id] = 0; });
             scores[loseId] = -totalWin;
         }
         scores[winId] = totalWin;
         currentScores = scores;
-
         document.getElementById('result').innerHTML = players.map(p => `
             <div class="score-card ${scores[p.id] >= 0 ? 'win-item' : 'lose-item'}">
                 <span class="p-name-id-${p.id}"><b>${p.name}</b>${p.id === dealId ? '<span class="dealer-tag">庄</span>' : ''}</span>
@@ -280,14 +277,16 @@
     }
 
     function recordGame(isZh) {
-        const winId = parseInt(document.querySelector('input[name="winner"]:checked').value);
-        const dealId = parseInt(document.querySelector('input[name="dealer"]:checked').value);
-        const loseId = parseInt(document.querySelector('input[name="loser"]:checked').value);
+        const winnerEl = document.querySelector('input[name="winner"]:checked');
+        const dealerEl = document.querySelector('input[name="dealer"]:checked');
+        const loserEl = document.querySelector('input[name="loser"]:checked');
+        if(!winnerEl || !dealerEl) return alert("请选择赢家和庄家");
+        const winId = parseInt(winnerEl.value);
+        const dealId = parseInt(dealerEl.value);
+        const loseId = loserEl ? parseInt(loserEl.value) : -1;
         const typeText = document.querySelector(`label[for="${document.querySelector('input[name="winType"]:checked').id}"]`).innerText;
-        
         let finalScores = {...currentScores};
         if(isZh) { Object.keys(finalScores).forEach(id => finalScores[id] = -finalScores[id]); }
-
         history.unshift({
             id: Date.now(),
             winName: players.find(p => p.id === winId).name,
@@ -326,14 +325,15 @@
     function copyReport() {
         if (history.length === 0) return alert("暂无记录可分享");
         let stats = {};
-        players.forEach(p => stats[p.id] = { total: 0, dPao: 0, maxLz: 0, curLz: 0 });
+        players.forEach(p => stats[p.id] = { total: 0, dPao: 0, maxLz: 0, curLz: 0, zHu: 0 });
         
         let historyCopy = [...history].reverse();
         let lastDealer = -1;
 
         historyCopy.forEach(h => {
             players.forEach(p => stats[p.id].total += (h.scores[p.id] || 0));
-            if (h.loserId !== -1) stats[h.loserId].dPao++;
+            if (h.loserId !== -1 && !h.isZh) stats[h.loserId].dPao++;
+            if (h.isZh) stats[h.winId].zHu++;
             if (h.dealerId === lastDealer) {
                 stats[h.dealerId].curLz++;
                 stats[h.dealerId].maxLz = Math.max(stats[h.dealerId].maxLz, stats[h.dealerId].curLz);
@@ -346,6 +346,7 @@
         let sorted = [...players].sort((a,b) => stats[b.id].total - stats[a.id].total);
         let dpWang = [...players].sort((a,b) => stats[b.id].dPao - stats[a.id].dPao)[0];
         let lzWang = [...players].sort((a,b) => stats[b.id].maxLz - stats[a.id].maxLz)[0];
+        let zhWang = [...players].sort((a,b) => stats[b.id].zHu - stats[a.id].zHu)[0];
 
         let text = `🀄 【海伦麻将结算单】\n📅 ${new Date().toLocaleDateString()} (共${history.length}局)\n-----------------------\n🏆 累计总分榜\n`;
         sorted.forEach((p, i) => {
@@ -353,13 +354,23 @@
             text += `${i===0?'🥇':(i===3?'🔹':'🔹')} ${p.name}：${t>0?'+':''}${t}${i===0?' (赢家)':''}\n`;
         });
 
-        text += `\n🎖️ 牌局英雄榜\n  点炮王：${dpWang.name} (${stats[dpWang.id].dPao}次)\n  连庄王：${lzWang.name} (${stats[lzWang.id].maxLz + 1}次)\n`;
+        // 牌局英雄榜逻辑：连庄王(>=3)、点炮王(>0)、炸胡王(>0)
+        let heroes = [];
+        if (stats[lzWang.id].maxLz  > 0) heroes.push(`🔹连庄王：${lzWang.name} (${stats[lzWang.id].maxLz+1}次)`);
+        if (stats[dpWang.id].dPao > 0) heroes.push(`🔹点炮王：${dpWang.name} (${stats[dpWang.id].dPao}次)`);
+        if (stats[zhWang.id].zHu > 0) heroes.push(`🔹炸胡王：${zhWang.name} (${stats[zhWang.id].zHu}次)`);
 
-        text += `\n📜 历史明细 (正序)\n`;
-        historyCopy.forEach((h, i) => {
-            let detail = players.map(p => `${p.name.charAt(0)}:${h.scores[p.id]>0?'+':''}${h.scores[p.id]}`).join(',');
-            text += `${i+1}. ${h.winName}(${h.type})\n   [${detail}]\n`;
-        });
+        if (heroes.length > 0) {
+            text += `\n🎖️ 牌局英雄榜\n` + heroes.join('\n') + `\n`;
+        }
+
+        text += `\n📜 历史明细 (倒叙)\n`;
+const totalRounds = history.length; // 总局数
+history.forEach((h, i) => {
+    let detail = players.map(p => `${p.name.charAt(0)}:${h.scores[p.id]>0?'+':''}${h.scores[p.id]}`).join(',');
+    // 序号逻辑：总局数 - 当前索引。 比如共5局，第一行显示 5. (最新)，最后一行显示 1. (最早)
+    text += `${totalRounds - i}. ${h.winName}(${h.type})\n   [${detail}]\n`;
+});
 
         text += `-----------------------\n🔗 结算器地址：\n${window.location.href.split('?')[0]}\n✅ 数据已核对，祝下把翻盘！`;
 
@@ -370,7 +381,9 @@
     function clearHistory() { if(confirm('清空记录？')){ history = []; save(); updateUI(); } }
     function refreshLogic(t) { if(t==='winner') updateLoserOptions(); calculate(); }
     function passDealer() {
-        const cur = parseInt(document.querySelector('input[name="dealer"]:checked').value);
+        const curEl = document.querySelector('input[name="dealer"]:checked');
+        if(!curEl) return;
+        const cur = parseInt(curEl.value);
         const idx = players.findIndex(p => p.id === cur);
         document.getElementById(`dealer${players[(idx+1)%4].id}`).checked = true;
         calculate();
